@@ -1,9 +1,23 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 import pandas as pd
 import os
+
+
+# In[2]:
+
 
 def getUnits(filePath, valueCheck):
     df = pd.read_csv(filePath)
     return df.head(0).columns[3] == valueCheck
+
+
+# In[3]:
+
 
 def getMeasurements(filePath):
     useCols = ['Name', 'X', 'Y', 'Z']
@@ -17,50 +31,42 @@ def getMeasurements(filePath):
         currentMeasurement = {}
         for anno in df.values:
             currentAnno = anno[0]
-            deltaX = annotation[1] - anno[1]
-            deltaY = annotation[2] - anno[2]
-            deltaZ = annotation[3] - anno[3]
-            currentMeasurement[currentAnno] = [deltaX, deltaY, deltaZ]
+            deltaX = (annotation[1] - anno[1])*0.01
+            deltaY = (annotation[2] - anno[2])*0.01
+            deltaZ = (annotation[3] - anno[3])*0.01
+            deltaLine = ((deltaX**2 + deltaY**2 + deltaZ**2)**0.5)
+            # currentMeasurement[currentAnno] = [deltaX, deltaY, deltaZ, deltaLine]
+            currentMeasurement[currentAnno] = deltaLine
         points.append(currentAnnotation)
         measurements[currentAnnotation] = currentMeasurement
     print("Measurements have been successfully extracted!")
     return measurements
 
+
+# In[4]:
+
+
 def makeExcelFile(dataArray, fileName):
-    # Extract dynamic headers
-    sets = list(dataArray.keys())  # Get all sets (outer keys)
-    keys_per_set = list(next(iter(dataArray.values())).keys())  # Get keys inside each set
-    num_values = len(next(iter(next(iter(dataArray.values())).values())))  # Number of values per key
-    
-    # Generate MultiIndex column headers dynamically
-    column_tuples = [("Set", "")]
-    for key in keys_per_set:
-        column_tuples.append((key, "X"))
-        column_tuples.append((key, "Y"))
-        column_tuples.append((key, "Z"))
-    
-    # Process data into rows
-    rows = []
-    for set_name, keys in dataArray.items():
-        row = [set_name]
-        for key in keys_per_set:
-            row.extend(keys[key])  # Extract values dynamically
-        rows.append(row)
-    
-    # Create DataFrame
-    df = pd.DataFrame(rows, columns=pd.MultiIndex.from_tuples(column_tuples))
-    
-    # Save to Excel
-    df.to_excel(fileName, index=True)
+    df = pd.DataFrame.from_dict(measurements, orient='index')
+    df.index.name = 'row_names'
+    df = df.reset_index()
+    df.to_excel(fileName, index=False)
     
     print("Excel file has been successfully created!")
+
+
+# In[6]:
+
+
+#Set path to files and gather them into one variable list, based on keyword preference.
 
 path = "Python Checkpoint CSV Files\\"
 keyWord = ".csv"
 files = [os.path.join(path, file) for file in os.listdir(path) if keyWord.lower() in file.lower()]
-firstFilePath = files[0]
-df = pd.read_csv(firstFilePath)
+
+df = pd.read_csv(files[0])
 firstUnits = df.head(0).columns[3]
+# print(files)
 for filePath in files:
     measurements = getMeasurements(filePath)
     # print(measurements)
@@ -70,3 +76,4 @@ for filePath in files:
         makeExcelFile(measurements, outputExcelFile)
     else:
         print(outputExcelFile+" was not processed due to the measurements being different than the original file in the directory.")
+
